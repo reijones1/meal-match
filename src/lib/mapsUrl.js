@@ -1,0 +1,19 @@
+export function placeMapsUrl(placeId, name) {
+  const params = new URLSearchParams({
+    api: '1',
+    query: name,
+    query_place_id: placeId,
+  })
+  return `https://www.google.com/maps/search/?${params.toString()}`
+}
+
+// `origin` is the user's coordinates — omitted entirely when we don't have them (e.g.
+// location permission was denied), letting Google Maps fall back to the device's own current
+// location instead of us guessing. `travelMode` matches this app's DRIVING/WALKING values.
+export function directionsUrl(origin, destination, placeId, travelMode = 'DRIVING') {
+  const params = new URLSearchParams({ api: '1', travelmode: travelMode.toLowerCase() })
+  if (origin) params.set('origin', `${origin.lat},${origin.lng}`)
+  if (destination) params.set('destination', `${destination.lat},${destination.lng}`)
+  if (placeId) params.set('destination_place_id', placeId)
+  return `https://www.google.com/maps/dir/?${params.toString()}`
+}

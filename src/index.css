@@ -1,0 +1,167 @@
+:root {
+  /* "Golden hour dinner with friends" — warm cream + deep espresso, chili-orange as the
+     one loud color, mustard-gold as its quieter partner. Tomato-red/herb-green stay
+     reserved for the swipe semantics (No/Yes) so they keep their meaning. */
+  --text: #6b5544;
+  --text-h: #2b1b14;
+  --text-muted: #9c8672;
+  --bg: #fdf6ec;
+  --surface: #fffcf7;
+  --border: #ecdcc5;
+
+  --accent: #e8542e;
+  --accent-h: #cf431f;
+  --accent-bg: rgba(232, 84, 46, 0.1);
+  --accent-border: rgba(232, 84, 46, 0.4);
+
+  --gold: #d9932e;
+  --gold-bg: rgba(217, 147, 46, 0.14);
+
+  --like: #3f8f52;
+  --dislike: #cf4331;
+
+  --code-bg: #f4ead9;
+  --social-bg: rgba(244, 234, 217, 0.5);
+  --shadow:
+    rgba(43, 27, 20, 0.08) 0 10px 24px -8px, rgba(43, 27, 20, 0.06) 0 2px 6px -2px;
+
+  --sans: 'Manrope', system-ui, 'Segoe UI', sans-serif;
+  --heading: 'Fraunces', Georgia, serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 26px;
+
+  font: 17px/1.55 var(--sans);
+  letter-spacing: 0.1px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #d9c3ae;
+    --text-h: #fff6e8;
+    --text-muted: #a98d72;
+    --bg: #211611;
+    --surface: #2b1e17;
+    --border: #493424;
+
+    --accent: #ff6b41;
+    --accent-h: #ff835f;
+    --accent-bg: rgba(255, 107, 65, 0.16);
+    --accent-border: rgba(255, 107, 65, 0.45);
+
+    --gold: #f0ac47;
+    --gold-bg: rgba(240, 172, 71, 0.16);
+
+    --like: #5cbf72;
+    --dislike: #ef6250;
+
+    --code-bg: #33241a;
+    --social-bg: rgba(51, 36, 26, 0.5);
+    --shadow:
+      rgba(0, 0, 0, 0.4) 0 10px 24px -8px, rgba(0, 0, 0, 0.3) 0 2px 6px -2px;
+  }
+
+  #social .button-icon {
+    filter: invert(1) brightness(2);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  /* A faint warm glow behind everything instead of a flat fill — reads as "lit room,"
+     not "SaaS dashboard." */
+  background-image: radial-gradient(ellipse 900px 500px at 50% -10%, var(--accent-bg), transparent);
+  background-repeat: no-repeat;
+}
+
+#root {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--heading);
+  color: var(--text-h);
+  margin: 0;
+}
+
+h1 {
+  font-size: 52px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: var(--space-4) 0 var(--space-2);
+
+  @media (max-width: 1024px) {
+    font-size: 34px;
+  }
+}
+
+h2 {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+
+  @media (max-width: 1024px) {
+    font-size: 21px;
+  }
+}
+
+h3 {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+p {
+  margin: 0;
+}
+
+code {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}

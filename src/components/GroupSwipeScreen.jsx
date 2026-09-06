@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CARD_TYPES, resolveDeckItems } from '../lib/deck'
-import SwipeCard from './SwipeCard'
+import SwipeDeck from './SwipeDeck'
+import SoundToggle from './SoundToggle'
 import { fetchGroup, fetchGroupMembers, updateMemberLocation } from '../lib/groups'
 import { fetchGroupSwipes, recordSwipe } from '../lib/swipes'
 import { getCurrentPosition } from '../lib/geolocation'
@@ -19,6 +20,9 @@ function GroupSwipeScreen({ group, memberId, onAllFinished }) {
   // { [memberId]: Set(cuisine_name) } — a member has "finished" once their set covers
   // every cuisine in the deck.
   const [swipesByMember, setSwipesByMember] = useState({})
+  // { [cuisine_name]: Set(member_id) } — who's already said yes to each cuisine, purely for
+  // the "N others already said yum!" tease while swiping (see teaseText below).
+  const [likesByCuisine, setLikesByCuisine] = useState({})
 
   useEffect(() => {
     let cancelled = false
@@ -69,11 +73,17 @@ function GroupSwipeScreen({ group, memberId, onAllFinished }) {
         const rows = await fetchGroupSwipes(group.id)
         if (cancelled) return
         const tally = {}
+        const likes = {}
         for (const row of rows) {
           if (!tally[row.member_id]) tally[row.member_id] = new Set()
           tally[row.member_id].add(row.cuisine_name)
+          if (row.liked) {
+            if (!likes[row.cuisine_name]) likes[row.cuisine_name] = new Set()
+            likes[row.cuisine_name].add(row.member_id)
+          }
         }
         setSwipesByMember(tally)
+        setLikesByCuisine(likes)
       } catch (err) {
         console.error('Could not load existing swipes:', err)
       }
@@ -102,6 +112,16 @@ function GroupSwipeScreen({ group, memberId, onAllFinished }) {
             next[row.member_id] = updated
             return next
           })
+          if (row.liked) {
+            setLikesByCuisine((prev) => {
+              const next = { ...prev }
+              const existing = next[row.cuisine_name] ?? new Set()
+              const updated = new Set(existing)
+              updated.add(row.member_id)
+              next[row.cuisine_name] = updated
+              return next
+            })
+          }
         },
       )
       .subscribe((status, err) => {
@@ -129,6 +149,17 @@ function GroupSwipeScreen({ group, memberId, onAllFinished }) {
     }
   }, [finishedCount, totalMembers, onAllFinished])
 
+  // "N others already said yum!" — a light, non-intrusive nod to the fact this is a group
+  // session, only shown when it's actually true for the card currently on screen.
+  const teaseText = useMemo(() => {
+    if (deck == null || isFinished) return null
+    const likers = likesByCuisine[deck[index].name]
+    if (!likers) return null
+    const count = [...likers].filter((id) => id !== memberId).length
+    if (count === 0) return null
+    return `${count} other${count === 1 ? '' : 's'} already said yum!`
+  }, [isFinished, deck, index, likesByCuisine, memberId])
+
   function handleSwipe(direction) {
     const item = deck[index]
     setIndex((prev) => prev + 1)
@@ -149,6 +180,7 @@ function GroupSwipeScreen({ group, memberId, onAllFinished }) {
 
   return (
     <div className="app">
+      {!isFinished && <SoundToggle />}
       <h1 className="app-title">Meal Match</h1>
       <p className="group-progress">
         {totalMembers == null ? 'Loading group…' : `${finishedCount} of ${totalMembers} have finished`}
@@ -157,12 +189,7 @@ function GroupSwipeScreen({ group, memberId, onAllFinished }) {
       {isFinished ? (
         <p className="restaurant-status">You're all done! Waiting on the rest of the group…</p>
       ) : (
-        <>
-          <p className="progress">
-            {index + 1} / {deck.length}
-          </p>
-          <SwipeCard key={deck[index].id} cuisine={deck[index]} onSwipe={handleSwipe} />
-        </>
+        <SwipeDeck deck={deck} index={index} onSwipe={handleSwipe} teaseText={teaseText} />
       )}
     </div>
   )

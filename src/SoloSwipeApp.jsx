@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { buildDeck, DEFAULT_SETTINGS } from './lib/deck'
-import SwipeCard from './components/SwipeCard'
+import SwipeDeck from './components/SwipeDeck'
 import ResultScreen from './components/ResultScreen'
 import SwipeSettings from './components/SwipeSettings'
 import Modal from './components/Modal'
+import SoundToggle from './components/SoundToggle'
 import { GearIcon } from './components/icons'
 
 function SoloSwipeApp({ onExit }) {
@@ -81,6 +82,7 @@ function SoloSwipeApp({ onExit }) {
 
   return (
     <div className="app">
+      {!isFinished && <SoundToggle />}
       <h1 className="app-title">Meal Match</h1>
 
       {isFinished ? (
@@ -92,10 +94,7 @@ function SoloSwipeApp({ onExit }) {
         />
       ) : (
         <>
-          <p className="progress">
-            {index + 1} / {deck.length}
-          </p>
-          <SwipeCard key={deck[index].id} cuisine={deck[index]} onSwipe={handleSwipe} />
+          <SwipeDeck deck={deck} index={index} onSwipe={handleSwipe} />
           <button type="button" className="btn btn-restart" onClick={onExit}>
             Back to home
           </button>

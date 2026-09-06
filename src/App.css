@@ -13,11 +13,49 @@
   margin: var(--space-2) 0 var(--space-1);
 }
 
-.progress {
+/* ---------- Deck progress (dot pips) ---------- */
+
+.deck-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.deck-dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 260px;
+}
+
+.deck-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.2s ease, transform 0.2s ease, width 0.2s ease, height 0.2s ease;
+}
+
+.deck-dot-done {
+  background: var(--gold);
+  opacity: 0.55;
+}
+
+.deck-dot-current {
+  background: var(--accent);
+  width: 9px;
+  height: 9px;
+}
+
+.deck-progress-label {
   color: var(--text-muted);
-  margin-bottom: var(--space-5);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .group-progress {
@@ -48,6 +86,29 @@
 }
 
 .settings-trigger:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.sound-toggle {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.sound-toggle:hover {
   color: var(--accent);
   border-color: var(--accent-border);
 }
@@ -171,10 +232,15 @@
   gap: var(--space-5);
 }
 
-.card {
+.card-stack {
   position: relative;
   width: min(320px, 82vw);
   aspect-ratio: 3 / 4;
+}
+
+.card {
+  position: absolute;
+  inset: 0;
   background: var(--surface);
   border: 2.5px solid var(--text-h);
   border-radius: var(--radius-lg);
@@ -189,10 +255,54 @@
   cursor: grab;
   touch-action: none;
   user-select: none;
+  z-index: 10;
 }
 
 .card:active {
   cursor: grabbing;
+}
+
+/* Same specificity as .card above (one class each) — deliberately declared after it so this
+   wins the z-index/transform/opacity for the two peeking cards behind the interactive one,
+   without needing extra specificity. --peek-depth (1 or 2) is set inline per card.
+   transform-origin:top means the scale shrinks the box from its own top edge downward, so
+   (unlike a center-origin scale) the shrunk-and-shifted box's bottom edge still ends up
+   below the front card's — that's what actually produces a visible peeking sliver, rather
+   than a smaller card lost entirely inside the front card's silhouette. */
+.card-peek {
+  cursor: default;
+  pointer-events: none;
+  transform-origin: top;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  transform: translateY(calc(var(--peek-depth) * 26px)) scale(calc(1 - var(--peek-depth) * 0.04));
+  opacity: calc(1 - var(--peek-depth) * 0.14);
+  z-index: calc(5 - var(--peek-depth));
+}
+
+.social-tease {
+  position: absolute;
+  top: var(--space-4);
+  left: 50%;
+  max-width: 85%;
+  text-align: center;
+  background: var(--gold-bg);
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  animation: tease-in 0.25s ease-out both;
+}
+
+@keyframes tease-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 .card-emoji {
@@ -328,10 +438,44 @@
   font-weight: 600;
 }
 
+.winner-celebrate {
+  position: relative;
+}
+
 .winner-emoji {
   font-size: 88px;
   line-height: 1;
   margin: var(--space-2) 0;
+}
+
+.confetti {
+  position: absolute;
+  inset: -20px -20% auto -20%;
+  height: 160px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  animation-name: confetti-fall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: both;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10px) translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(150px) translateX(var(--drift)) rotate(var(--rot));
+    opacity: 0;
+  }
 }
 
 .also-liked {

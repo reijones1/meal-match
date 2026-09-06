@@ -1,13 +1,33 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import RestaurantResults from './RestaurantResults'
 import TieBreakScreen from './TieBreakScreen'
+import Confetti from './Confetti'
+
+// However the winner got decided — auto (only one liked), tie-break tap, or a group majority/
+// rematch resolving elsewhere and flowing in via props — this is the one place they all land,
+// so the celebration only needs to live here once.
+const CELEBRATION_MS = 1100
 
 function ResultScreen({ cuisines, answers, onRestart, secondaryAction, renderResults }) {
   const liked = cuisines.filter((c) => answers[c.id])
   const [selectedWinner, setSelectedWinner] = useState(null)
   const [activeCuisine, setActiveCuisine] = useState(null)
+  const [celebrating, setCelebrating] = useState(false)
+  // Tracks which winner's celebration has already played, by id (not object reference) —
+  // a parent re-render can hand us a new-but-equivalent winner object without this being a
+  // genuinely new result, and re-bursting confetti on every incidental re-render would be
+  // obnoxious rather than fun.
+  const celebratedIdRef = useRef(null)
 
   const winner = liked.length === 1 ? liked[0] : selectedWinner
+
+  useEffect(() => {
+    if (!winner || celebratedIdRef.current === winner.id) return
+    celebratedIdRef.current = winner.id
+    setCelebrating(true)
+    const timer = setTimeout(() => setCelebrating(false), CELEBRATION_MS)
+    return () => clearTimeout(timer)
+  }, [winner])
 
   if (liked.length === 0) {
     return (
@@ -42,7 +62,10 @@ function ResultScreen({ cuisines, answers, onRestart, secondaryAction, renderRes
   return (
     <div className="results">
       <p className="results-label">Tonight's winner:</p>
-      <div className="winner-emoji">{winner.emoji}</div>
+      <div className="winner-celebrate">
+        {celebrating && <Confetti />}
+        <div className="winner-emoji">{winner.emoji}</div>
+      </div>
       <h1>{winner.name}</h1>
 
       {others.length > 0 && (
@@ -72,7 +95,13 @@ function ResultScreen({ cuisines, answers, onRestart, secondaryAction, renderRes
 
       <div className="restaurants-section">
         <h3>Nearby {displayedCuisine.name} spots</h3>
-        {renderResults ? renderResults(displayedCuisine) : <RestaurantResults cuisine={displayedCuisine} />}
+        {celebrating ? (
+          <p className="restaurant-status">🎉 Locking in {winner.name}…</p>
+        ) : renderResults ? (
+          renderResults(displayedCuisine)
+        ) : (
+          <RestaurantResults cuisine={displayedCuisine} />
+        )}
       </div>
 
       <button type="button" className="btn btn-restart" onClick={onRestart}>

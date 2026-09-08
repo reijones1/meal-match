@@ -950,6 +950,52 @@
   color: var(--accent);
 }
 
+/* ---------- Results tab bar (Restaurants / Delivery) ----------
+   Deliberately not built from .pill-tab(s) — this is page-level navigation for the results
+   screen, not another filter row like radius/travel-mode/sort below it, so it needs a
+   visibly different treatment: an underline indicator instead of a pill/border, larger type,
+   and more breathing room. */
+
+.results-tabbar {
+  position: relative;
+  display: inline-flex;
+  gap: var(--space-6);
+  margin-bottom: var(--space-4);
+  border-bottom: 1.5px solid var(--border);
+}
+
+.results-tabbar-item {
+  font: inherit;
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: var(--space-2) 2px var(--space-3);
+  margin: 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.results-tabbar-item:hover:not(.results-tabbar-item-active) {
+  color: var(--text);
+}
+
+.results-tabbar-item-active {
+  color: var(--text-h);
+  font-weight: 800;
+}
+
+.results-tabbar-indicator {
+  position: absolute;
+  bottom: -1.5px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: left 0.25s ease, width 0.25s ease;
+}
+
 .restaurant-list {
   list-style: none;
   padding: 0;
@@ -1123,6 +1169,50 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ---------- Delivery results (sibling of the eat-in restaurant card) ---------- */
+
+/* No separate icon-button column here (no directions/map to link to) — the order button and
+   fallback links live inside .restaurant-info instead, as an extra row under the address. */
+.restaurant-item-delivery {
+  align-items: flex-start;
+}
+
+.delivery-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: var(--space-2);
+}
+
+.btn-order-food {
+  padding: 8px 18px;
+  font-size: 14px;
+}
+
+.delivery-fallback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+
+.delivery-fallback-label {
+  color: var(--text-muted);
+}
+
+.delivery-fallback a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.delivery-fallback a:hover {
+  color: var(--accent-h);
 }
 
 /* ---------- Home / join / lobby shells ---------- */

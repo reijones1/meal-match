@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import RestaurantCard from './RestaurantCard'
+import DeliveryRestaurantCard from './DeliveryRestaurantCard'
 import RestaurantMap from './RestaurantMap'
 import RestaurantMapModal from './RestaurantMapModal'
 import AdjustSearchAreaPanel from './AdjustSearchAreaPanel'
@@ -22,6 +23,11 @@ const SORT_OPTIONS = [
 const TRAVEL_MODE_OPTIONS = [
   { id: 'DRIVING', label: 'Driving' },
   { id: 'WALKING', label: 'Walking' },
+]
+
+const RESULTS_TABS = [
+  { id: 'restaurants', label: 'Restaurants' },
+  { id: 'delivery', label: 'Delivery' },
 ]
 
 // Explicitly three tiers here, not solo mode's four ([1, 3, 5, 10]) — the group "show more"
@@ -52,6 +58,12 @@ function GroupRestaurantResults({ group, isHost, cuisine }) {
   const [computeError, setComputeError] = useState('')
   const [myLocation, setMyLocation] = useState(null)
 
+  // Purely local/per-device — each participant can look at either tab without it affecting
+  // what anyone else sees, unlike everything else on this screen (search area, radius, travel
+  // mode), which is genuinely shared state.
+  const [activeTab, setActiveTab] = useState('restaurants')
+  const [indicatorStyle, setIndicatorStyle] = useState(null)
+  const tabRefs = useRef({})
   const [sortMode, setSortMode] = useState('best')
   const [activeId, setActiveId] = useState(null)
   const [mapExpanded, setMapExpanded] = useState(false)
@@ -63,6 +75,19 @@ function GroupRestaurantResults({ group, isHost, cuisine }) {
   const [showingMore, setShowingMore] = useState(false)
 
   const hostComputedRef = useRef(false)
+
+  // Measures the active tab's actual rendered position/width so the underline can sit exactly
+  // beneath whichever label is active and slide precisely between them — "Restaurants" and
+  // "Delivery" aren't the same width, so a fixed 50/50 split wouldn't line up correctly.
+  useEffect(() => {
+    function updateIndicator() {
+      const el = tabRefs.current[activeTab]
+      if (el) setIndicatorStyle({ left: el.offsetLeft, width: el.offsetWidth })
+    }
+    updateIndicator()
+    window.addEventListener('resize', updateIndicator)
+    return () => window.removeEventListener('resize', updateIndicator)
+  }, [activeTab])
 
   // Shares this device's own location for its own Directions/View-on-Maps buttons — separate
   // from the group's shared search center, since those two actions are personal to whoever
@@ -289,6 +314,10 @@ function GroupRestaurantResults({ group, isHost, cuisine }) {
     if (sortMode === 'closest') return sortByClosest(restaurants, metricKey)
     return sortByBest(restaurants)
   }, [restaurants, sortMode])
+  // Filtered straight from the same shared candidate set the Restaurants tab uses — no
+  // separate search, per how the delivery flag is fetched once alongside everything else in
+  // computeGroupRestaurantResults/expandGroupRestaurantResults.
+  const deliveryRestaurants = useMemo(() => restaurants.filter((r) => r.delivery === true), [restaurants])
 
   const areaLabel = searchAreaLabel(groupRow, members)
   const mapCenter = resultRow?.search_center ?? myLocation
@@ -299,6 +328,32 @@ function GroupRestaurantResults({ group, isHost, cuisine }) {
 
   return (
     <>
+      <div className="results-tabbar" role="tablist" aria-label="Results view">
+        {RESULTS_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            ref={(el) => {
+              tabRefs.current[tab.id] = el
+            }}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={`results-tabbar-item${activeTab === tab.id ? ' results-tabbar-item-active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+        {indicatorStyle && (
+          <span
+            className="results-tabbar-indicator"
+            style={{ left: `${indicatorStyle.left}px`, width: `${indicatorStyle.width}px` }}
+          />
+        )}
+      </div>
+
+      <h3>Nearby {cuisine.name} spots</h3>
+
       <div className="adjust-search-row">
         {areaLabel && <p className="lobby-hint">{areaLabel}</p>}
         {isHost && (
@@ -345,78 +400,103 @@ function GroupRestaurantResults({ group, isHost, cuisine }) {
         <p className="restaurant-status">No {cuisine.name} restaurants found for the group. Try adjusting the search area.</p>
       )}
 
-      {resultRow && restaurants.length > 0 && mapCenter && (
-        <RestaurantMap
-          variant="preview"
-          userLocation={mapCenter}
-          restaurants={sortedRestaurants}
-          activeId={activeId}
-          onMarkerClick={setActiveId}
-          cuisineEmoji={cuisine.emoji}
-          onExpandRequest={() => setMapExpanded(true)}
-        />
-      )}
-
-      {mapExpanded && mapCenter && (
-        <RestaurantMapModal
-          userLocation={mapCenter}
-          restaurants={sortedRestaurants}
-          activeId={activeId}
-          onSelect={setActiveId}
-          cuisineEmoji={cuisine.emoji}
-          travelMode={travelMode}
-          onClose={() => setMapExpanded(false)}
-        />
-      )}
-
-      {resultRow && restaurants.length > 0 && (
+      {activeTab === 'restaurants' && (
         <>
-          <div className="pill-tabs" role="group" aria-label="Travel mode">
-            {TRAVEL_MODE_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={`pill-tab${travelMode === option.id ? ' pill-tab-active' : ''}`}
-                disabled={radiusBusy || showingMore}
-                onClick={() => handleSelectTravelMode(option.id)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+          {resultRow && restaurants.length > 0 && mapCenter && (
+            <RestaurantMap
+              variant="preview"
+              userLocation={mapCenter}
+              restaurants={sortedRestaurants}
+              activeId={activeId}
+              onMarkerClick={setActiveId}
+              cuisineEmoji={cuisine.emoji}
+              onExpandRequest={() => setMapExpanded(true)}
+            />
+          )}
 
-          <div className="pill-tabs" role="group" aria-label="Sort restaurants">
-            {SORT_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={`pill-tab${sortMode === option.id ? ' pill-tab-active' : ''}`}
-                onClick={() => setSortMode(option.id)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+          {mapExpanded && mapCenter && (
+            <RestaurantMapModal
+              userLocation={mapCenter}
+              restaurants={sortedRestaurants}
+              activeId={activeId}
+              onSelect={setActiveId}
+              cuisineEmoji={cuisine.emoji}
+              travelMode={travelMode}
+              onClose={() => setMapExpanded(false)}
+            />
+          )}
 
-          <ul className="restaurant-list">
-            {sortedRestaurants.map((r, index) => (
-              <li key={r.id}>
-                <RestaurantCard
-                  restaurant={r}
-                  index={index}
-                  active={r.id === activeId}
-                  onSelect={setActiveId}
-                  userLocation={myLocation}
-                  travelMode={travelMode}
-                />
-              </li>
-            ))}
-          </ul>
+          {resultRow && restaurants.length > 0 && (
+            <>
+              <div className="pill-tabs" role="group" aria-label="Travel mode">
+                {TRAVEL_MODE_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`pill-tab${travelMode === option.id ? ' pill-tab-active' : ''}`}
+                    disabled={radiusBusy || showingMore}
+                    onClick={() => handleSelectTravelMode(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
 
-          {nextRadiusTier && (
-            <button type="button" className="btn-link show-more-link" onClick={handleShowMore} disabled={showingMore || radiusBusy}>
-              {showingMore ? 'Finding more…' : `Show more (up to ${nextRadiusTier} mi)`}
-            </button>
+              <div className="pill-tabs" role="group" aria-label="Sort restaurants">
+                {SORT_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`pill-tab${sortMode === option.id ? ' pill-tab-active' : ''}`}
+                    onClick={() => setSortMode(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              <ul className="restaurant-list">
+                {sortedRestaurants.map((r, index) => (
+                  <li key={r.id}>
+                    <RestaurantCard
+                      restaurant={r}
+                      index={index}
+                      active={r.id === activeId}
+                      onSelect={setActiveId}
+                      userLocation={myLocation}
+                      travelMode={travelMode}
+                    />
+                  </li>
+                ))}
+              </ul>
+
+              {nextRadiusTier && (
+                <button
+                  type="button"
+                  className="btn-link show-more-link"
+                  onClick={handleShowMore}
+                  disabled={showingMore || radiusBusy}
+                >
+                  {showingMore ? 'Finding more…' : `Show more (up to ${nextRadiusTier} mi)`}
+                </button>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {activeTab === 'delivery' && resultRow && restaurants.length > 0 && (
+        <>
+          {deliveryRestaurants.length === 0 ? (
+            <p className="restaurant-status">No {cuisine.name} restaurants nearby offer delivery right now.</p>
+          ) : (
+            <ul className="restaurant-list">
+              {deliveryRestaurants.map((r, index) => (
+                <li key={r.id}>
+                  <DeliveryRestaurantCard restaurant={r} index={index} />
+                </li>
+              ))}
+            </ul>
           )}
         </>
       )}

@@ -78,3 +78,23 @@ export async function searchRestaurantsByCuisine(cuisineName, { lat, lng }, radi
     }),
   )
 }
+
+// The `delivery` field isn't exposed through the JS Places library's own Place class at all
+// (neither the initial `fields` mask nor a follow-up `fetchFields` call recognizes it —
+// confirmed live, both reject it as "Unknown fields requested") — only the plain REST
+// endpoint returns it, so this hits that directly instead of going through the SDK. Used only
+// for delivery-mode results, since fetching it for every restaurant in the (far more common)
+// eat-in flow would be pure wasted cost.
+export async function fetchDeliveryFlag(placeId) {
+  const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY
+  try {
+    const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
+      headers: { 'X-Goog-Api-Key': apiKey, 'X-Goog-FieldMask': 'delivery' },
+    })
+    if (!res.ok) return false
+    const body = await res.json()
+    return body.delivery === true
+  } catch {
+    return false
+  }
+}

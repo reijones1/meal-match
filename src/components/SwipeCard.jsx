@@ -9,7 +9,10 @@ const MAX_ROTATION_DEG = 18
 // exit animation. Exposes `swipe(direction)` via ref so the Yes/No buttons (rendered by the
 // parent SwipeDeck, since they sit outside the card stack) can trigger the exact same exit
 // sequence a drag-release does, instead of a separate instant/no-animation path.
-const SwipeCard = forwardRef(function SwipeCard({ cuisine, onSwipe, teaseText }, ref) {
+const SwipeCard = forwardRef(function SwipeCard(
+  { cuisine, onSwipe, teaseText, rightBadgeText = 'YUM', leftBadgeText = 'NAH' },
+  ref,
+) {
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [springBack, setSpringBack] = useState(false)
@@ -96,13 +99,13 @@ const SwipeCard = forwardRef(function SwipeCard({ cuisine, onSwipe, teaseText },
         className="badge badge-yes"
         style={{ opacity: yumOpacity, transform: `rotate(10deg) scale(${0.85 + 0.2 * yumOpacity})` }}
       >
-        YUM
+        {rightBadgeText}
       </div>
       <div
         className="badge badge-no"
         style={{ opacity: nahOpacity, transform: `rotate(-10deg) scale(${0.85 + 0.2 * nahOpacity})` }}
       >
-        NAH
+        {leftBadgeText}
       </div>
 
       <div className="card-emoji">{cuisine.emoji}</div>

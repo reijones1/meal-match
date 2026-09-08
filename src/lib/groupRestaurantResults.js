@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { searchRestaurantsByCuisine } from './places'
+import { fetchDeliveryFlag, searchRestaurantsByCuisine } from './places'
 import { getGroupTravelTimeMatrix } from './distanceMatrix'
 import { withGroupBestScore, sortByBest } from './ranking'
 import { centroidOf, formatGroupTravelLabel, milesBetween } from './distance'
@@ -67,6 +67,11 @@ function resolveSearchCenter(groupRow, membersWithLocation) {
 // gets every participant's travel time to each survivor in as few Distance Matrix requests
 // as possible, scores on rating + group travel convenience, and caps to one batch's worth.
 // Shared by both a fresh compute and an expand-to-a-wider-radius append.
+//
+// Also fetches each survivor's `delivery` flag here (one REST call per candidate — the JS
+// Places library doesn't expose that field through its own fields/fetchFields API at all,
+// confirmed live) so the results screen's Delivery tab can filter/display straight from this
+// same candidate set instead of the group running a second search from scratch.
 async function searchAndScoreCandidates({ cuisineName, searchCenter, radiusMiles, excludeIds, origins, travelMode }) {
   const rawResults = await searchRestaurantsByCuisine(cuisineName, searchCenter, radiusMiles)
 
@@ -80,7 +85,10 @@ async function searchAndScoreCandidates({ cuisineName, searchCenter, radiusMiles
   const openOnly = withinRadius.filter((r) => !r.openStatus.hoursAvailable || r.openStatus.isOpenNow)
   const withLocation = openOnly.filter((r) => r.location && !excludeIds.has(r.id))
 
-  const matrix = await getGroupTravelTimeMatrix(origins, withLocation.map((r) => r.location), travelMode)
+  const [matrix, deliveryFlags] = await Promise.all([
+    getGroupTravelTimeMatrix(origins, withLocation.map((r) => r.location), travelMode),
+    Promise.all(withLocation.map((r) => fetchDeliveryFlag(r.id))),
+  ])
 
   const withGroupTimes = withLocation.map((restaurant, destIndex) => {
     const times = matrix.map((row) => row[destIndex]).filter((v) => v != null)
@@ -94,6 +102,7 @@ async function searchAndScoreCandidates({ cuisineName, searchCenter, radiusMiles
       maxMinutes,
       avgMinutes,
       durationText: formatGroupTravelLabel(minMinutes, maxMinutes),
+      delivery: deliveryFlags[destIndex],
     }
   })
 

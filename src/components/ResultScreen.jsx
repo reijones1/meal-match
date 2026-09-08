@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import RestaurantResults from './RestaurantResults'
 import TieBreakScreen from './TieBreakScreen'
 import Confetti from './Confetti'
@@ -13,21 +13,25 @@ function ResultScreen({ cuisines, answers, onRestart, secondaryAction, renderRes
   const [selectedWinner, setSelectedWinner] = useState(null)
   const [activeCuisine, setActiveCuisine] = useState(null)
   const [celebrating, setCelebrating] = useState(false)
-  // Tracks which winner's celebration has already played, by id (not object reference) —
-  // a parent re-render can hand us a new-but-equivalent winner object without this being a
-  // genuinely new result, and re-bursting confetti on every incidental re-render would be
-  // obnoxious rather than fun.
-  const celebratedIdRef = useRef(null)
 
   const winner = liked.length === 1 ? liked[0] : selectedWinner
 
+  // Depends on winner?.id (a stable primitive), not `winner` itself — a parent re-render can
+  // hand this a new-but-equivalent winner object (GroupResultsScreen does this, e.g. while
+  // recordSessionResult is still settling), and keying off the object reference would re-run
+  // this on every such render, restarting the celebration each time instead of only once per
+  // actual result. Deliberately no extra "already celebrated" ref guard on top of that — this
+  // effect is naturally idempotent (mount, clean up, and run again always ends with exactly
+  // one live timer that clears `celebrating`), and a ref guard here actually breaks that: it
+  // survives the mount/cleanup/remount pair React's StrictMode does once in dev, so the
+  // second run sees "already celebrated" and skips scheduling a replacement for the one the
+  // cleanup just cancelled — leaving `celebrating` stuck true forever.
   useEffect(() => {
-    if (!winner || celebratedIdRef.current === winner.id) return
-    celebratedIdRef.current = winner.id
+    if (!winner) return
     setCelebrating(true)
     const timer = setTimeout(() => setCelebrating(false), CELEBRATION_MS)
     return () => clearTimeout(timer)
-  }, [winner])
+  }, [winner?.id])
 
   if (liked.length === 0) {
     return (
@@ -94,13 +98,15 @@ function ResultScreen({ cuisines, answers, onRestart, secondaryAction, renderRes
       )}
 
       <div className="restaurants-section">
-        <h3>Nearby {displayedCuisine.name} spots</h3>
         {celebrating ? (
           <p className="restaurant-status">🎉 Locking in {winner.name}…</p>
         ) : renderResults ? (
           renderResults(displayedCuisine)
         ) : (
-          <RestaurantResults cuisine={displayedCuisine} />
+          <>
+            <h3>Nearby {displayedCuisine.name} spots</h3>
+            <RestaurantResults cuisine={displayedCuisine} />
+          </>
         )}
       </div>
 
